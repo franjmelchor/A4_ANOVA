@@ -1,0 +1,272 @@
+---
+title: "Actividad 4 - Análisis de varianza y repaso del curso"
+author: "Francisco Javier Melchor González"
+date: "10/1/2021"
+toc: true
+theme: united
+output: pdf_document
+---
+# Paquetes
+Los paquetes que se van a utilizar para el desarrollo de esta actividad, son los siguientes:
+```{r, include=FALSE}
+if(!require(dplyr)){
+  install.packages("dplyr")
+  library(dplyr)
+}
+if(!require(DataCombine)){
+  install.packages("DataCombine")
+  library(DataCombine)
+}
+
+if(!require(Rmisc)){
+  install.packages("Rmisc")
+  library(Rmisc)
+}
+if(!require(MLmetrics)){
+  install.packages("MLmetrics")
+  library(MLmetrics)
+}
+
+if(!require(agricolae)){
+  install.packages("agricolae")
+  library(agricolae)
+}
+grDevices::dev.set(1)
+
+if(!require(ggplot2)){
+  install.packages("ggplot2")
+  library(ggplot2)
+}
+```
+
+# 1 Lectura del fichero y preparación de los datos
+
+**Enunciado**:
+
+*Leed el fichero fifa.csv y guardad los datos en un objeto con identificador denominado fifa. A continuación, verificad el tipo de cada variable. ¿Qué variables son de tipo numérico? ¿Qué variables son de tipo categórico?*
+
+**Solución**:
+En primer lugar, realizamos la lectura del fichero **Fifa.csv**, aplicando para ello la función *read.csv*.
+
+Los parámetros que recibe esta función son:
+
+* **file:** ruta del archivo que se quiere leer, en este caso se indica a través de la variable **fifa_filename**
+* **header:** atributo booleano que indica si el fichero a leer contiene o no cabecera, en este caso si, por lo que su valor es **TRUE**.
+* **sep:** atributo que indica el separador de campos que utiliza el archivo, en este caso es la **coma (",")**.
+* **na.strings:** atributo que indica que cadenas representan valores faltantes, en este caso, las cadenas vacías y con un espacio.
+* **stringAsFactors:** atributo booleano que permite codificar todas las variables de tipo cadena como factores en vez de como cadenas si se le da el valor **TRUE** como en este caso. Esto se realiza debido a que la mayoría de variables de tipo cadena de este dataset, realmente son factores.
+* **encoding:** atributo que indica la codificación del archivo, en este caso **UTF-8**.
+
+
+```{r}
+fifa_filename<-"../Data/Fifa.csv"
+fifa <- read.csv(file=fifa_filename, header=TRUE, sep=",", 
+         na.strings=c(""," "), stringsAsFactors=TRUE, encoding = 'UTF-8')
+head(fifa)
+```
+
+A continuación, se procede a mostrar los tipos de cada una de las variables que forman el dataframe.
+
+```{r}
+str(fifa)
+```
+
+Como se puede observar, hay algunas variables que tienen un formato que no le corresponde. En el caso de la variable __Name__, se cambiará a un tipo de variable de cadena de caracteres, ya que no se trata de una variable de tipo cualitativa o factor. Y en el caso de las variables __National_Kit, Club_Kit y Contract_Expiry__, se cambiarán a variables enteras, ya que no contienen números con decimales distintos de 0.
+
+```{r}
+
+fifa$Name<-as.character(fifa$Name)
+fifa$National_Kit<-as.integer(fifa$National_Kit)
+fifa$Club_Kit<-as.integer(fifa$Club_Kit)
+fifa$Contract_Expiry<-as.integer(fifa$Contract_Expiry)
+str(fifa)
+
+```
+
+## 1.1 Preparación de los datos
+
+**Enunciado**:
+
+*Las variables __Weight__ y __Height__ están clasificadas como factor. Para poder trabajar con ellas hay que convertirlas en numéricas.*
+
+* *Convertir el peso de los jugadores en un valor numérico, eliminando el texto "kg" de los datos.*
+* *Convertir la altura de los jugadores en un valor numérico, eliminando el texto "cm" de los datos.*
+
+**Solución**:
+
+A continuación, se procede a formatear las variables indicadas:
+
+```{r}
+head(fifa$Weight)
+fifa$Weight <- gsub("kg","",fifa$Weight)
+fifa$Weight<-as.numeric(fifa$Weight)
+head(fifa$Weight)
+
+head(fifa$Height)
+fifa$Height <- gsub("cm","",fifa$Height)
+fifa$Height<-as.numeric(fifa$Height)
+head(fifa$Height)
+```
+
+## 1.2 Clasificación de jugadores
+
+**Enunciado**:
+*La variable Rating indica la calidad del jugador de la siguiente forma: Excelente de 90 a 99, Muy bueno de 80 a 89, Bueno de 70 a 79, Regular de 50 a 69, Malo de 40 a 49, Muy malo de 0 a 39. Cread una variable categórica denominada clasificacion, que clasifique al jugador en una de estas categorías.*
+
+**Solución**:
+
+Para obtener la variable __clasificacion__, se procede a crear una función que devuelva los valores de las diferentes categorías de la misma en función del valor de la variable __Rating__ que recibirá como parámetro de entrada:
+
+```{r}
+get_clasificacion <- function(x){
+  if (x >= 90 & x <= 99)
+    return("Excelente")
+  else if (x >= 80 & x<=89)
+    return ("Muy bueno")
+  else if (x >= 70 & x<=79)
+    return("Bueno")
+  else if (x >= 50 & x<=69)
+    return("Regular")
+  else if (x >= 40 & x <= 49)
+    return("Malo")
+  else if (x >= 0 & x <= 39)
+    return ("Muy malo")
+}
+```
+
+Una vez creada la función, se procede a realizar un lapply por cada una de las filas de la columna __Rating__ del dataframe __fifa__ e insertar el resultado en la nueva columna __clasificacion__:
+
+```{r}
+fifa$clasificacion <- lapply(fifa$Rating, get_clasificacion)
+fifa$clasificacion <- unlist(fifa$clasificacion)
+fifa$clasificacion <- as.factor(fifa$clasificacion)
+
+head(fifa$Rating)
+head(fifa$clasificacion)
+tail(fifa$Rating)
+tail(fifa$clasificacion)
+```
+
+# 2 Estadística descriptiva y visualización
+
+## 2.1 Análisis descriptivo
+
+**Enunciado**:
+
+*Realizad un análisis descriptivo numérico de los datos (resumid los valores de las variables numéricas y categóricas). Mostrad el número de observaciones y el número de variables.*
+
+*Contad cuántos clubs distintos y cuántas nacionalidades distintas hay representados en los datos.*
+
+**Solución:**
+
+Se procede a continuación a obtener un análisis descriptivo de las diferentes columnas que forman al dataframe a analizar: 
+
+```{r}
+summary(fifa)
+```
+
+Para obtener el número de clubs distintios y de nacionalidades, se procede a obtener las categorías de cada una de las variables que identifican dicha información y a contar las mismas:
+
+```{r}
+length(levels(fifa$Club))
+length(levels(fifa$Nationality))
+```
+
+## 2.2 Valores ausentes
+
+**Enunciado**:
+
+* *Eliminad los valores ausentes del conjunto de datos. Denominad al nuevo conjunto de datos fifaNet (Nota: En las variables ‘National_Kit‘ y ‘National_Position‘ se observan muchos casos sin valor. No eliminéis estas observaciones ya que no son verdaderos missings, sino que simplemente indican que el jugador no ha jugado nunca con el equipo nacional).*
+
+* *Comprobad cuántas observaciones no tienen valores ausentes y sacad conclusiones sobre cómo de serio es el problema de valores ausentes en estos datos.*
+
+
+**Solución**:
+
+A continuación, lo primero que vamos realizar es obtener el número de valores faltantes o nulos para cada una de las variables del dataframe:
+
+```{r}
+colSums(is.na(fifa))
+
+```
+
+Como se puede observar, exceptuando las columnas __National_Position__ y __National_Kit__, hay 1 fila con valores nulos solamente en algunas de las columnas.
+
+Procedemos a continuación a sustituir los valores faltantes de las columnas __National_Position__ y __National_Kit__ por valores que nos permitan identificar que dicho jugador no ha jugado en el equipo nacional.
+
+En el caso de la columna __National_Position__, al tratarse de una variable de tipo factor, se sustituirán los valores "NA" por "-", lo que nos permitirá identificar perfectamente que se trata de un jugador que no ha jugado en el equipo nacional.
+
+En el caso de la columna __National_Kit__, al tratarse de una variable numérica que toma únicamente valores positivos, se le asignará el valor "-1" a aquellos jugadores que no hayan jugado en el equipo nacional.
+
+```{r}
+fifa$National_Position<-as.character(fifa$National_Position)
+fifa[is.na(fifa$National_Position),]$National_Position <- "-"
+fifa$National_Position<-factor(fifa$National_Position)
+head(fifa$National_Position)
+
+
+fifa[is.na(fifa$National_Kit),]$National_Kit <- "-1"
+fifa$National_Kit <- as.integer(fifa$National_Kit)
+min(fifa$National_Kit)
+```
+
+Una vez marcados estos valores, procedemos a eliminar todas las filas que contengan valores NA en el dataframe:
+
+```{r}
+fifaNet = DropNA(fifa)
+
+colSums(is.na(fifaNet))
+
+```
+
+Como se puede observar, ya no existen valores faltantes en el dataframe.
+
+Se podrían haber dejado los valores de las columnas __National_Position__ y __National_Kit__ como valores NA y hacer una subselección de columnas de las cuales eliminar valores NA no incluyéndolas, pero al haber un gran número de columnas, esto resultaría mucho más engorroso.
+
+## 2.3 Visualización
+**Enunciado:**
+
+*1. Cread una variable denominada ‘portero‘ que indique si el jugador juega de portero en su club o juega en otra posición (categoría "GK" en ‘Club_Position‘).*
+
+**Solución**:
+
+Para obtener esta variable cualitativa, se procede a crear una función que devuelva los diferentes valores de la misma en función del valore de la variable __Club_Position__ que recibe como parámetro de entrada:
+
+```{r}
+get_portero <- function(x){
+  if(x == 'GK')
+    return ("Yes")
+  else
+    return ("No")
+}
+```
+
+Una vez desarrollada la función, se procede a realizar un lapply por cada una de las filas de la columna __Club_Position__ e imputar los resultados en la nueva variable __portero__:
+
+```{r}
+fifaNet$portero <- lapply(fifaNet$Club_Position,get_portero)
+fifaNet$portero <- unlist(fifaNet$portero)
+fifaNet$portero <- as.factor(fifaNet$portero)
+levels(fifaNet$portero)
+```
+
+Para comprobar que la variable ha sido creada correctamente, se procede a contar el número de porteros que hay a través de la variable __Club_Position__ y a través de la variable __portero__:
+
+```{r}
+length(fifaNet[fifaNet$Club_Position == 'GK',])
+length(fifaNet[fifaNet$portero == 'Yes',])
+```
+
+Como se puede observar, el número de filas obtenidas es el mismo en ambos casos, lo que indica que se ha realizado correctamente la imputación de la variable __portero__.
+
+A continuación, se procede a representar la distribución de esta nueva variable a través de un Gráfico Circular o *Pie Chart*:
+
+```{r}
+table_portero <- table(fifaNet$portero)
+pct_portero <- round(table_portero/sum(table_portero)*100)
+lbls_portero <- paste(names(table_portero), "\n", pct_portero, sep="")
+lbls_portero <- paste(lbls_portero, '%', sep="")
+
+pie(table_portero, labels = lbls_portero, col=c("red4","darkblue"))
+```
+
