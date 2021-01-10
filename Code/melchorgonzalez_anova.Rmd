@@ -266,7 +266,239 @@ table_portero <- table(fifaNet$portero)
 pct_portero <- round(table_portero/sum(table_portero)*100)
 lbls_portero <- paste(names(table_portero), "\n", pct_portero, sep="")
 lbls_portero <- paste(lbls_portero, '%', sep="")
-
-pie(table_portero, labels = lbls_portero, col=c("red4","darkblue"))
+pie(table_portero, labels = lbls_portero, main="Pie Chart of Portero\n", col=c("red4","darkblue"))
 ```
+**Enunciado:**
+
+
+*2. Mostrad con diversos diagramas de caja la distribución de la variable ‘Weight‘ según la variable ‘portero‘, según ‘Preffered_Foot‘, según ‘clasificacion‘ y según ‘Age‘.*
+
+**Solución**:
+
+A continuación se procede a representar mediante diagramas de cajas la variable __Weight__ según las variables solicitadas en el enunciado:
+
+```{r}
+boxplot(Weight~portero,data=fifaNet,xlab="Portero", 
+        ylab="Peso")
+
+boxplot(Weight~Preffered_Foot,data=fifaNet,xlab="Preffered foot", 
+        ylab="Peso")
+
+boxplot(Weight~clasificacion,data=fifaNet,xlab="Clasificacion", 
+        ylab="Peso")
+
+boxplot(Weight~Age,data=fifaNet,xlab="Age", 
+        ylab="Peso")
+```
+
+**Enunciado:**
+
+*3. Dibujad un diagrama de barras que muestre el porcentaje de jugadores que finalizan el contrato en cada uno de los años.*
+
+**Solución**:
+
+```{r}
+table_contract <- table(fifaNet$Contract_Expiry)
+table_contract
+pct_contract <- round(table_contract/sum(table_contract)*100)
+barplot(pct_contract, ylab ="Proporción de jugadores %", 
+        xlab="Distribución de años de expiración de contratos",
+        cex.main = 0.8, cex.lab = 0.8, col="#33FFB5")
+
+```
+
+**Enunciado:**
+
+*4. Interpretad los gráficos brevemente.*
+
+**Solución**:
+1. En el primer gráfico podemos observar que el porcentaje de porteros frente al porcentaje de jugadores de campos es mucho menor, lo cual es razonable, ya que portero sólo hay uno en el campo y jugadores 11.
+
+2.1 En el diagrama de cajas de la variable __Weight__ con respecto a la variable __portero__, podemos observar que cambia la distribución del peso dependiendo si el jugador es un portero o no. Vemos que en el caso de los jugadores de campo, la mediana se encuentra en 75kg aproximadamente, y en el caso de los porteros, la mediana se encuentra en 85kg aproximadamente, es decir 10kg más de media. Por otro lado, existe una varianza menor en el caso de los porteros, pero esto es debido a que el número de casos es mucho menor que el de jugadores de campo.
+
+2.2 En el diagrama de cajas de la variable __Weight__ con respecto a la variable __Preffered foot__, podemos observar que la mediana se encuentra prácticamente al mismo nivel en ambos casos, 75kg. Pero sin embargo, la categoría **Right**, tiene algunos casos más de valores atípicos. Esto puede deberse a que la mayoría de los jugadores son diestros y no zurdos, por lo que hay un mayor número de casos en la categoría **Right** y esto hace que haya una mayor variedad en los diferentes jugadores.
+
+2.3 En el diagrama de cajas de la variable __Weight__ con respecto a la variable __Clasificacion__, vemos que la distribución del peso es diferente en las diferentes categorías de la variable clasificación. Siendo el caso de la mediana con **menor valor** en aquellos jugadores considerados como **"malos"** y el caso de la mediana con **mayor valor** aquellos jugadores considerados como **"excelentes"**. Esto puede deberse a la masa muscular de los mismos, y no realmente a la materia grasa como tal, por lo que parece que a medida que la clasificación es mejor, mayor es la masa muscular de los jugadores.
+
+2.4 En el diagrama de cajas de la variable __Weight__ con respecto a la variable __Age__, podemos observar que en la mayoría de los casos, a una mayor edad mayor es el peso del jugadore, exceptuando las edades de 33 y 39 que tienen una mediana de peso más bajo con respecto a las medianas que se encuentran a sus extremos (derecho e izquierdo)
+
+2.5 Por úlitmo, en el diagrama de barras que muestra la distribución de la frecuencia de la variable que indica el año en el que expira el contrato del jugador, podemos observar que la mayoría de los contratos terminan en el mismo año en el que se basa el dataframe, es decir, en el año 2017 y 2018. Esto es debido a que en el fútbol de manera general los contratos suelen renovarse por temporada.
+
+
+## 2.4 Comprobación de normalidad
+
+**Enunciado:**
+
+*¿Podemos asumir que la variable Weight tiene una distribución normal? Debéis justificar la respuesta a partir de métodos visuales.*
+
+**Solución:**
+Para comprobar la normalidad de la variable __Weight__, se procede a representar la misma mediante un histograma, para ver si dicho histograma presenta la forma de una campana de Gauss, y posteriormente mediante el gráfico Q-Q, el cual representa los cuantiles de la variable y veremos si estos se ajustan a la recta que cruza en diagonal los cuadrantes de la gráfica.
+
+```{r}
+hist(fifaNet$Weight, breaks=sqrt(dim(fifaNet)[1]), 
+     xlab="Peso en kg", col="#33C4FF")
+```
+
+En primer lugar, podemos observar que la distribución de la variable __Weight__ en el histograma es apróximadamente de manera normal, es decir, con un intervalo donde se concentra la moda de la variable.
+
+```{r}
+qqnorm(fifaNet$Weight)
+qqline(fifaNet$Weight)
+```
+
+Por otro lado, en la gráfica anterior podemos observar que la mayoría de los puntos se ajustan a la recta, por lo que no hay evidencias contra el supuesto de normalidad.
+
+# 3 Estadística inferencial
+
+**Enunciado:**
+
+*Suponemos que los jugadores del año 2017 son una muestra representativa de los jugadores de la última década (población). Utilizamos el conjunto de datos fifaNet.*
+
+## 3.1 Intervalo de confianza de la media poblacional de la variable __Weight_
+
+*a) Calculad manualmente el intervalo de confianza al 95% de la media poblacional de la variable Weight de los jugadores (No se pueden utilizar funciones como t.test o z.test para el cálculo). A partir del resultado obtenido, explicad cómo se interpreta el intervalo de confianza.*
+
+**Solución:**
+
+A continuación, se procede a declarar una función que permita calcular el intervalo de confianza de cualquier variable numérica:
+
+```{r}
+getConfidentInterval<- function(var){
+  s = sd(var)
+  n = length(var)
+  me = abs(qt((1-0.95)/2,n-1 )) * (s/sqrt(n))
+  x = mean(var)
+  confidenceInterval = c(x-me,x+me)
+  return (confidenceInterval)
+}
+```
+
+Una vez declarada la función, procedemos a emplear la misma para calcular el intervalo de confianza de la variable __Weight__
+
+```{r}
+getConfidentInterval(fifaNet$Weight)
+```
+
+Para demostrar que la función creada funciona correctamente, se procede a calcular el intervalo mediante la función **CI** de R.
+
+```{r}
+CI(fifaNet$Weight, ci=0.95)
+```
+
+Como se puede observar, el resultado obtenido es el mismo por ambas funciones, solo que mostrado de distinta forma.
+
+**Interpretación**:
+La interpretación del intervalo de confianza con un nivel de confianza de 95%, se corresponde con que el 95% de las veces que se calcule la media de la variable de la cual se está calculando el intervalo, de una muestra extraída de la misma población que esta, dicha media se encontrará entre el intervalo que ha sido calculado. En este caso, el 95% de las veces que se extraiga una muestra de la misma población que esta, la media del peso de los jugadores se encontrará entre `r getConfidentInterval(fifaNet$Weight)[1]` y `r getConfidentInterval(fifaNet$Weight)[2]`
+
+**Enunciado:**
+
+*b) Calculad los intervalos de confianza al 95% de la media poblacional de la variable Weight, en función de si los jugadores son de campo o porteros. ¿Qué conclusión se puede extraer de la comparación de los dos intervalos, en relación a si existe solapamiento o no en los intervalos de confianza? Justificad la respuesta.*
+
+**Solución**:
+
+Para calcular el intervalo de confianza de la variable __Weight__ en función de los jugadores de campo o porteros volveremos a aplicar la función **getConfidentInterval** y filtraremos por los dos posibles valores de la variable __portero__:
+
+```{r}
+getConfidentInterval(fifaNet[fifaNet$portero=='Yes',]$Weight)
+getConfidentInterval(fifaNet[fifaNet$portero=='No',]$Weight)
+```
+
+Como podemos observar, el intervalo de confianza de la media de peso obtenido para los porteros es diferente que el obtenido para los jugadores de campo. Por lo que, según los intervalos obtenidos, podemos asegurar con un 95% de confianza, que los porteros tienen un mayor peso que los jugadores de campo. Esto puede deberse a que un portero a lo largo de un partido de fútbol y a lo largo de un entrenamiento, no realiza el mismo ejercicio físico que un jugador de campo.
+
+## 3.2 Contraste de hipótesis para la diferencia de medias
+
+**Enunciado:**
+
+*¿Podemos aceptar que la altura de los porteros supera en más de 5 centímetros la altura de los jugadores de campo? Responded a la pregunta utilizando un nivel de confianza del 95%.*
+
+*Nota: se deben realizar los cálculos manualmente. No se pueden usar funciones de R que calculen directamente el contraste como t.test o similar. Sí se pueden usar funciones como mean, sd, qnorm, pnorm, qt y pt.*
+
+*Seguid los pasos que se detallan a continuación*
+
+### 3.2.1 Escribid la hipótesis nula y la alternativa
+
+**Solución**:
+
+* $H_{0}: \mu_{hp} - \mu_{hj} = 5$
+* $H_{1}: \mu_{hp} - \mu_{hj} > 5$
+
+### 3.2.2 Justificación del test a aplicar
+
+**Solución**:
+
+En primer lugar, antes de indicar el tipo de test, indicamos que podemos asumir que se trata de una muestra con distribución normal debido al tamaño de la misma (400).
+
+Dado que se trata de una variable que se distribuye de manera normal, para evaluar si la mdeia de altura de los porteros supera en más de 5cm la de los jugadores de campo, podemos aplicar un test de hipótesis de dos muestras sobre la media.
+
+Además, comprobaremos si la varianza de la altura de los jugadores de campo es la misma que la de los porteros, ya función de si la varianza de los dos supuestos es la misma o no, el test a aplicar será de una forma u otra. Para ello, aplicamos el test de __var.test__ de R:
+
+```{r}
+var.test(fifaNet$Height[fifaNet$portero=='Yes'], fifaNet$Height[fifaNet$portero=='No'])
+```
+
+Como se puede observar, el p-valor obtenido es inferior a 0.05, por lo que descartamos la igualdad de las varianzas en las dos poblaciones.
+
+En consecuencia, aplicamos un test de dos muestras independientes sobre la media con varianza desconocida y diferente. En este caso se trata de un test unilateral por la derecha.
+
+### 3.2.3 Cálculos
+
+**Solución**:
+
+En primer lugar, se declara una función que permite el cálculo de un test de hipótesis sobre dos medias:
+
+```{r}
+mean_hip_test <- function(x1, x2, CL=0.95, equalvar=TRUE, type="bilateral",
+                          value=0){
+  
+  mean1<-mean(x1)
+  n1<-length(x1)
+  sd1<-sd(x1)
+  mean2<-mean(x2)
+  n2<-length(x2)
+  sd2<-sd(x2)
+  
+  if(equalvar){
+    comun_std <- sqrt( ((n1-1)*sd1^2 + (n2-1)*sd2^2 )/(n1+n2-2) )
+    Sb <- comun_std*sqrt(1/n1 + 1/n2)
+    df <- n1+n2-2
+  }
+  else{
+    Sb <- sqrt( sd1^2/n1 + sd2^2/n2 )
+    denom <- ( (sd1^2/n1)^2/(n1-1) + (sd2^2/n2)^2/(n2-1))
+    df <- ( (sd1^2/n1 + sd2^2/n2)^2 ) / denom
+  }
+  
+  alfa <- (1-CL)
+  t<- (mean1-mean2-value) / Sb
+  
+  if (type=="bilateral"){
+    tcritical <- qt( alfa/2, df, lower.tail=FALSE ) #two sided
+    pvalue<-pt( abs(t), df, lower.tail=FALSE )*2 #two sided
+  }
+  else if (type=="less"){
+    tcritical <- qt( alfa, df, lower.tail=TRUE )
+    pvalue<-pt( t, df, lower.tail=TRUE )
+  }
+  else{ #(type=="greater")
+    tcritical <- qt( alfa, df, lower.tail=FALSE )
+    pvalue<-pt( t, df, lower.tail=FALSE )
+  }
+  
+  solution<-data.frame(t,tcritical,pvalue,df)
+  return(solution)
+}
+```
+
+Una vez declarada la función, procedemos a llamar a dicha función y calcular el test:
+
+```{r}
+mean_hip_test(x1=fifaNet$Height[fifaNet$portero=='Yes'], 
+              x2=fifaNet$Height[fifaNet$portero=='No'],
+              equalvar=FALSE, type="greater",
+              value=5)
+```
+
+### 3.2.4 Interpretación del test
+Dado a que el valor obtenido por el p-valor es < 0.05 descartamos la hipótesis nula y podemos concluir que con una confianza del 95% la altura de los porteros supera en 5 centímetros a la altura de los jugadores de campo.
+
 
