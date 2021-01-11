@@ -8,7 +8,7 @@ output: pdf_document
 ---
 # Paquetes
 Los paquetes que se van a utilizar para el desarrollo de esta actividad, son los siguientes:
-```{r, include=FALSE}
+```{r, message=FALSE}
 if(!require(dplyr)){
   install.packages("dplyr")
   library(dplyr)
@@ -31,7 +31,6 @@ if(!require(agricolae)){
   install.packages("agricolae")
   library(agricolae)
 }
-grDevices::dev.set(1)
 
 if(!require(ggplot2)){
   install.packages("ggplot2")
@@ -312,6 +311,7 @@ barplot(pct_contract, ylab ="Proporción de jugadores %",
 *4. Interpretad los gráficos brevemente.*
 
 **Solución**:
+
 1. En el primer gráfico podemos observar que el porcentaje de porteros frente al porcentaje de jugadores de campos es mucho menor, lo cual es razonable, ya que portero sólo hay uno en el campo y jugadores 11.
 
 2.1 En el diagrama de cajas de la variable __Weight__ con respecto a la variable __portero__, podemos observar que cambia la distribución del peso dependiendo si el jugador es un portero o no. Vemos que en el caso de los jugadores de campo, la mediana se encuentra en 75kg aproximadamente, y en el caso de los porteros, la mediana se encuentra en 85kg aproximadamente, es decir 10kg más de media. Por otro lado, existe una varianza menor en el caso de los porteros, pero esto es debido a que el número de casos es mucho menor que el de jugadores de campo.
@@ -354,7 +354,7 @@ Por otro lado, en la gráfica anterior podemos observar que la mayoría de los p
 
 *Suponemos que los jugadores del año 2017 son una muestra representativa de los jugadores de la última década (población). Utilizamos el conjunto de datos fifaNet.*
 
-## 3.1 Intervalo de confianza de la media poblacional de la variable __Weight_
+## 3.1 Intervalo de confianza de la media poblacional de la variable __Weight__
 
 *a) Calculad manualmente el intervalo de confianza al 95% de la media poblacional de la variable Weight de los jugadores (No se pueden utilizar funciones como t.test o z.test para el cálculo). A partir del resultado obtenido, explicad cómo se interpreta el intervalo de confianza.*
 
@@ -502,3 +502,674 @@ mean_hip_test(x1=fifaNet$Height[fifaNet$portero=='Yes'],
 Dado a que el valor obtenido por el p-valor es < 0.05 descartamos la hipótesis nula y podemos concluir que con una confianza del 95% la altura de los porteros supera en 5 centímetros a la altura de los jugadores de campo.
 
 
+# 4 Modelo de regresión lineal
+
+**Enunciado**:
+
+*Estimad un modelo de regresión lineal múltiple que tenga como variables explicativas: Age, portero, Weight, Preffered_Foot, Vision y Ball_Control, y como variable dependiente el Rating de los jugadores.*
+
+*Especificad el nivel base de referencia de las variables cualitativas, usando la función relevel:*
+
+– *Para la variable portero, la categoría “Portero”.*
+
+– *Para la variable Preffered_Foot, la categoría “Left”.*
+
+**Solución:**
+
+En primer lugar realizaremos una selección del dataframe _fifaNet_ de las columnas solicitadas en el enunciado de este apartado, para aplicar el modelo sobre dicha selección. Para ello, utilizaremos la función **select** del paquete **dplyr**.
+
+```{r}
+features_model <- c("Age","portero","Weight","Preffered_Foot", "Vision", 
+                    "Ball_Control", "Rating")
+fifaNet_model <- fifaNet %>% select(features_model)
+head(fifaNet_model)
+str(fifaNet_model)
+```
+
+Una vez creada una variable que recoja las columnas que van a ser utilizadas para el modelo, procederemos a especificar el nivel base de referencia de las variables __portero y Preffered_Foot__.
+
+```{r}
+fifaNet_model$portero <- relevel(fifaNet_model$portero,ref="Yes")
+fifaNet_model$Preffered_Foot <- relevel(fifaNet_model$Preffered_Foot,ref="Left")
+```
+
+Una vez especificado el nivel base de referencia, procedemos a la aplicación del modelo de regresión lineal múltiple a través de la función **lm**:
+
+```{r}
+lm1 = lm(Rating~.,data=fifaNet_model)
+summary(lm1)
+```
+
+## 4.1 Interpretación del modelo
+
+**Enunciado**:
+
+*Interpretad el modelo lineal ajustado:*
+
+– *¿Cuál es la calidad del ajuste?*
+
+– *Explicad la contribución de las variables explicativas en el modelo*
+
+**Solución:**
+
+a) **Calidad del ajuste:** Para valorar la calidad del ajuste del modelo, nos fijaremos en la métrica __Adjusted R-squared__ o R cuadrado Ajustado. Esta métrica tiene un valor de **0.5094**, lo que indica que el modelo de regresión múltiple calculado explica apróximadamente el 51% de la variabilidad de la variable __Rating__. En este caso, estamos logrando conseguir un modelo que explica apróximadamente la mitad de la variabilidad de la variable objetivo, por lo que se trata de un modelo que se podría mejorar y que no resulta muy fiable.
+
+b) **Contribución de las variables explicativas:** Para poder evaluar la contribución de cada una de las variables explicativas nos fijaremos en la columna __Estimate__ de la visualizaciñon anterior.
+
+1. __Age__: En el caso de la variable __Age__, el resultado obtenido es de 0.44, lo que indica que por cada unidad que aumenta la edad del jugador, esto supone un aumento de 0.04 en la puntuación del mismo (Rating).
+
+2. __portero__: En este caso, el resultado obtenido es -9.35, lo que indica que el hecho de **ser portero**, afecta de manera negativa a la puntuación obtenida por ese jugador en 9.35 puntos. 
+
+3. __Weight__: En este caso, el resultado obtenido es de 0.24, lo que indica que por cada unidad que aumente el peso del jugador, afectará a su puntuación un 0.24.
+
+4. __Preffered_Foot__: En este caso, el resultado obtenido es de -0.047, lo que indica que el hecho de **ser zurdo**, afecta de manera negativa a la puntuación del jugadore en 0.047 unidades.
+
+5. __Vision__: En este caso, el resultado obtenido es de 0.089, lo que indica que por cada unidad que aumente la capacidad de visión del jugador, esto afectará a la puntuación del jugador en 0.089 unidades.
+
+6. __Ball_Control__: En este caso, el resultado obtenido es de 0.205, lo que indica que por cada unidad que aumente la capacidad de control del balón del jugador, esto afectará a la puntuación del mismo en 0.205 unidades.
+
+Además de la examinación de la estimación del efecto de cada variable al modelo, es importante destacar los p-valores obtenidos por cada una de las variables del modelo (Pr(>|t|) en la visualización anterior). Si observamos los valores obtenidos por las diferentes variables vemos que todos ellos son inferior a 0.05 menos el obtenido por la variable __Preffered_Foot__, que es igual a 0.596. Esto indica que esta variable no es explicativa para el modelo la mayoría de las veces (el 59.6% de los casos), por lo que no se debería tener en cuenta para la construcción del mismo.
+
+## 4.2 Predicción
+
+**Enunciado**:
+
+*Aplicad el modelo de regresión para predecir el rating de un jugador de campo con pie izquierdo preferido, con un peso de 70, edad de 24, control del balón de 80 y visión de 60.*
+
+**Solución**:
+
+A continuación, procedemos a obtener la predicción solicitada a través de la función **predict**:
+
+```{r}
+predict(lm1, newdata = data.frame(Age=24,portero="No",Weight=70,Preffered_Foot="Left",
+                                  Vision=60,Ball_Control=80), type='response')
+
+```
+
+# 5 Regresión logística
+
+## 5.1 Modelo predictivo
+
+**Enunciado:**
+
+*Ajustad un modelo predictivo basado en la regresión logística para predecir la probabilidad de jugar en la selección nacional en función de las variables: portero, Rating, Age y Work_Rate.*
+
+*Para ello, cread una variable internacional que indique si el jugador es internacional, es decir, si está en la selección nacional. La variable internacional debe codificarse como una variable dicotómica, que toma el valor 0 cuando el jugador no tiene dorsal en la selección (valor ausente en National_Kit) y 1 cuando tiene dorsal (valor en National_Kit).*
+
+*La variable internacional será la variable dependiente del modelo. Concretamente, se quiere evaluar la probabilidad de ser un jugador internacional en función de las variables: portero, Rating, Age y Work_Rate. Analizad la calidad del modelo y las variables que son relevantes.*
+
+**Solución:**
+
+En primer lugar, crearemos una función que nos permita obtener los diferentes valores de la variable cualitativa __internacional__, en función de los valores de la variable __National_Kit__ que recibirá como parámetro de entrada.
+
+```{r}
+get_internacional <- function(x) {
+  if (x == -1)
+    return (0)
+  else 
+    return (1)
+}
+
+```
+
+En la función anterior utilizamos el valor "-1" para detectar que un jugador no juega en el equipo nacional porque es el valor que imputamos al inicio de la práctica para aquellos valores faltantes de esta columna que correspondían con los jugadores que no jugaban en el equipo nacional.
+
+Una vez creada la función que nos permite obtener los diferentes valores de la variable __internacional__, procedemos a realizar un lapply a todas las filas de la columna __National_Kit__ del dataframe __fifaNet__ e imputar el resultado obtenido en la nueva variable __internacional__:
+
+```{r}
+fifaNet$internacional <- lapply(fifaNet$National_Kit,get_internacional)
+fifaNet$internacional <- unlist(fifaNet$internacional)
+fifaNet$internacional <- as.factor(fifaNet$internacional)
+head(fifaNet$internacional)
+tail(fifaNet$internacional)
+```
+
+Una vez obtenida la variable __internacional__, procedemos a seleccionar las variables que formarán el modelo de regresión logística y a almacenarlas en una nueva variable:
+
+```{r}
+features_glm <- c("portero","Rating","Age","Work_Rate","internacional")
+fifaNet_glm <- fifaNet %>% select(features_glm)
+head(fifaNet_glm)
+
+```
+
+Por último, procedemos a calcular el modelo de regresión logística solicitado:
+
+```{r}
+glm1 <- glm(internacional~.,data=fifaNet_glm,
+            family=binomial (link = logit))
+summary(glm1)
+```
+
+## 5.2 Matriz de confusión
+
+**Enunciado:**
+
+
+*A continuación analizad la precisión del modelo, comparando la predicción del modelo sobre los mismos datos del conjunto de datos. Asumiremos que la predicción del modelo es 1 (internacional) si la probabilidad del modelo de regresión logística es superior o igual a 0.5 y 0 en caso contrario. Analizad la matriz de confusión y las medidas de ‘sensitivity’ y ‘specificity’.*
+
+*Nota: Tomad como variable de interés ser jugador internacional. Por tanto, internacional igual a 1 será el caso positivo en la matriz de confusión y 0 el caso negativo.*
+
+**Solución:**
+
+A continuación, procedemos a obtener la matriz de confusión del modelo utilizando para ello los mismos datos que se han utilizado para entrenar al mismo.
+
+
+```{r}
+y_pred <- ifelse(glm1$fitted.values < 0.5, 0, 1)
+glm1.confusion_matrix <- ConfusionMatrix(y_true=fifaNet_glm$internacional,
+                                         y_pred=y_pred)
+glm1.confusion_matrix
+
+Specificity(y_true=fifaNet_glm$internacional,
+            y_pred=y_pred, positive = "1" )
+
+Sensitivity(y_true=fifaNet_glm$internacional,
+            y_pred=y_pred, positive = "1")
+```
+
+**Interpretación:**
+
+* **Matriz de confusión**: si evaluamos la matriz de confusión, podemos observar que el modelo calculado se encuentra sesgado hacia el caso negativo, esto quiere decir que tiende a asignar los casos a la clase "0" porque es la que más se repite. Esto puede detectarse porque de la clase 0 predicce bien la gran mayoría de los casos, fallando en menos de un 1% de los casos (lo cual ya es sospechoso que consiga predecir tan bien), y sin embargo en el caso de la clase "1" los predicce la mayoría mal, ya que tiende a estimar el valor que más se repite que es el 0. Esto puede ser debido a que no cuenta con la información suficiente para predecir correctamente los valores o que las variables no son lo suficientemente explicativas.
+
+* **Specificity**: Esta métrica mide la proporción de negativos reales con respecto a los negativos estimados por el modelo. Su valor máximo es 1, ya que se trata de una proporción, y el valor es tan alto en este caso (0.997) por lo indicado anteriormente, porque el modelo se encuentra sesgado hacia el caso negativo.
+
+* **Sensitivity**: Esta métrica, al contrario que la anterior, mide la proporción de positivos reales con respecto a los positivos estimados por el modelo. Su valor es muy bajo debido a que el modelo calculado no está logrando predecir correctamente los casos positivos.
+
+## 5.3 Interpretación
+
+**Enunciado:**
+
+*Interpretad el modelo ajustado. Concretamente, explicad la contribución de las variables explicativas para predecir si el jugador juega en la selección o no.*
+
+**Solución:**
+En primer lugar, para evaluar la contribución de las variables al modelo, se calculará un modelo que incluya únicamente la variable a analizar, para obtener la relación entre la variable objetivo (__internacional__) y la variable que se está evaluando en concreto, para realizar lo que se denomina *análisis en crudo*. Posteriormente, se analizarán los Odds Ratio (OR de ahora en adelante) en crudo para cada una de estas variables, para ver como afectan para predecir si un jugador juega en la selección o no.
+
+Para evaluar las diferentes variables, seguiremos el mismo orden que el obtenido con el resumen del modelo.
+
+
+```{r}
+glm_portero <- glm(formula=internacional~portero,data=fifaNet_glm,
+            family=binomial (link = logit))
+summary(glm_portero)
+```
+
+En el resultado obtenido se puede observar que el signo del coeficiente es positivo, lo que significa que la posibilidad de jugar en el equipo nacional es mayor en caso de que el jugador sea un portero, lo cual es lógico porque hay una menor competencia entre porteros que entre jugadores de campo, porque son menos.
+
+A continuación procedemos a calcular los OR de la variable portero.
+
+```{r}
+exp(coefficients(glm_portero))
+```
+
+Se tiene un OR para la variable portero igual a 2.32, por lo que la ocurrencia de jugar en el equipo nacional en el caso de los porteros es 2.32 veces mayor que la de los jugadores de campo.
+
+Pasamos a la variable __Rating__
+
+```{r}
+glm_rating <- glm(formula=internacional~Rating,data=fifaNet_glm,
+            family=binomial (link = logit))
+summary(glm_rating)
+
+exp(coefficients(glm_rating))
+
+```
+
+A la vista de los resultados obtenidos, se puede concluir que, por cada unidad que aumenta la variable __Rating__, aumenta la posibilidad de jugar en el equipo nacional. Para interpretar mejor la contribución de esta variable procedemos a obtener una gráfica que represente el aumento de la misma con respecto al aumento de la posibilidad de jugar en el equipo internacional, ya que el valor obtenido por el OR es muy pequeño.
+
+```{r}
+predic=predict(glm_rating,type="response")
+plot(fifaNet_glm$Rating,predic)
+
+```
+
+Como podemos observar, se trata de una gráfica exponencial, donde la probabilidad va creciendo más rápido a medida que aumenta el Rating, comenzándose a notar sobre todo a partir de 80.
+
+
+Pasamos a la variable __Age__
+
+```{r}
+glm_age <- glm(formula=internacional~Age,data=fifaNet_glm,
+            family=binomial (link = logit))
+summary(glm_age)
+
+exp(coefficients(glm_age))
+```
+
+A la vista de los resultados obtenidos, podemos concluir que por cada unidad que aumenta la edad del jugador aumenta 1.069 veces la posibilidad de jugar en el equipo nacional.
+
+Pasamos a la variable __Work_Rate__
+
+```{r}
+glm_work_Rate <- glm(formula=internacional~Work_Rate,data=fifaNet_glm,
+            family=binomial (link = logit))
+summary(glm_work_Rate)
+
+exp(coefficients(glm_work_Rate))
+```
+
+A la vista de los resultados obtenidos, podemos concluir que esta variable afecta de manera negativa a la posibilidad de jugar en el equipo nacional independientemente del valor que tome.
+
+Procedemos a evaluar cada uno de los posibles valores:
+
+* En el caso del valor "Hight/Low", la probabilidad de jugar en el equipo nacional es 0.39 veces menor.
+
+* En el caso del valor "High/Medium", la probabilidad de jugar en el equipo nacional es 0.45 veces menor.
+
+* En el caso del valor "Low/High", la probabilidad de jugar en el equipo nacional es 0.31 veces menor.
+
+* En el caso del valor "Low/Low", la probabilidad de jugar en el equipo nacional es 0.17 veces menor.
+
+* En el caso del valor "Low/Medium", la probabilidad de jugar en el equipo nacional es 0.25 veces menor.
+
+* En el caso del valor "Medium/High", la probabilidad de jugar en el equipo nacional es 0.45 veces menor.
+
+* En el caso del valor "Medium/Low", la probabilidad de jugar en el equipo nacional es 0.26 veces menor.
+
+* En el caso del valor "Medium/Medium", la probabilidad de jugar en el equipo nacional es 0.24 veces menor.
+
+## 5.4 Interpretación de la variable Work_Rate
+
+**Enunciado:**
+
+*La variable Work_Rate es una variable categórica con 9 categorías diferentes. Volved a ajustar el modelo logístico con las variables portero, Rating, Age y Work_Rate, pero ahora considerad como categoría de referencia de la variable Work_Rate la categoría ‘Medium / Medium’. Interpretad las diferencias en los resultados.*
+
+**Solución:**
+
+```{r}
+fifaNet_glm$Work_Rate <- relevel(fifaNet_glm$Work_Rate,"Medium / Medium")
+
+glm2 <-glm(internacional~.,data=fifaNet_glm,family=binomial(link = logit))
+
+summary(glm2)
+
+
+```
+
+En este segundo modelo calculado, podemos observar que si cambiamos la categoría de referencia de la variable __Work_Rate__, cambian los valores obtenidos por el modelo, en concreto cambian los valores de los coeficientes de la variable __Work_Rate__. Antes veíamos que esta afectaba de manera negativa al modelo independientemente del valor que tomase, sin embargo ahora solo afecta de manera negativa en algunos casos.
+
+
+## 5.5 Importancia de ser portero
+
+**Enunciado:**
+
+*En el modelo anterior, interpretad los niveles de la variable portero a partir del odds ratio. ¿En qué porcentaje se ve aumentada la probabilidad de ir a la selección si eres portero? Proporcionad intervalos de confianza del 95% de los odds ratio.*
+
+*Realiza el mismo análisis para la variable ‘Work_Rate’.*
+
+**Solución:**
+
+En el caso de la variable portero, ya se examinó anteriormente que la probabilidad de jugar en el equipo nacional se veía aumentada en 2.32 veces.
+
+Procedemos a calular el intervalo de confianza:
+
+```{r}
+exp(confint(glm_portero))
+
+```
+
+Los resultados obtenidos indican que la probabilida de jugar en el equipo nacional si el jugador es portero, aumenta en el 95% de los casos entre 1.81 y 2.94 veces.
+
+
+Para la variable 'Work_Rate' se evaluaron anteriormente, pero como estos han cambiado al cambiar la categoría de referencia, procedemos a comentar los nuevos resultados y a calcular los diferentes intervalos de confianza.
+
+```{r}
+glm_work_Rate <- glm(formula=internacional~Work_Rate,data=fifaNet_glm,
+                     family=binomial (link = logit))
+summary(glm_work_Rate)
+
+exp(coefficients(glm_work_Rate))
+
+exp(confint(glm_work_Rate))
+
+```
+
+Procedemos a analizar los resultados obtenidos para cada uno de los valores posibles de la variablw __Work_Rate__:
+
+* En el caso del valor "Hight/Hight", la probabilidad de jugar en el equipo nacional es 4.039 veces mayor de media y entre 3.24 y 4.99 según el IC obtenido.
+
+
+* En el caso del valor "Hight/Low", la probabilidad de jugar en el equipo nacional es 1.60 veces mayor de media y entre 1.17 y 2.13 según el IC obtenido.
+
+* En el caso del valor "High/Medium", la probabilidad de jugar en el equipo nacional es 1.84 veces mayor  de media y entre 1.56 y 2.71 según el IC obtenido.
+
+* En el caso del valor "Low/High", la probabilidad de jugar en el equipo nacional es 1.26 veces mayor de media y entre 0.81 y 1.84 según el IC obtenido.
+
+* En el caso del valor "Low/Low", la probabilidad de jugar en el equipo nacional es 0.72 veces menor de media y entre 0.04 y 3.37 según el IC obtenido.
+
+* En el caso del valor "Low/Medium", la probabilidad de jugar en el equipo nacional es 1.02 veces mayor de media y entre 0.63 y 1.56 según el IC obtenido.
+
+* En el caso del valor "Medium/High", la probabilidad de jugar en el equipo nacional es 1.85 veces mayor de media y entre 1.50 y 2.27 según el IC obtenido.
+
+* En el caso del valor "Medium/Low", la probabilidad de jugar en el equipo nacional es 1.06 veces mayor de media y entre 0.75 y 1.46 según el IC obtenido.
+
+## 5.6 Predicción
+
+**Enunciado**:
+
+*¿Con que probabilidad un portero de 25 años, con un rating de 95 puntos y una clasificación de Work_Rate como High/High irá a la selección?* 
+
+**Solución**:
+
+Para calcular la probabilidad aplicaremos la función **predict**:
+
+
+```{r}
+predict(glm2,newdata = data.frame(portero="Yes",Age=25,Rating=95, 
+                                  Work_Rate="High / High"), type='response')
+```
+
+La probabilidad obtenida es de 0.96.
+
+
+# 6 Análisis de la varianza (ANOVA) de un factor
+
+
+*Vamos a realizar un ANOVA para contrastar si existen diferencias en la variable Rating en función del grupode edad al que pertenecen los jugadores. Seguid los pasos que se indican.*
+
+
+## 6.1 Visualización gráfica
+
+**Enunciado**:
+
+*En primer lugar, a partir de la variable Age cread una variable categórica denominada Age_Int, que clasifique al jugador en una de estas tres categorías: Junior (edad menor o igual a 20), Middle (edad entre 21 y 27), Senior (edad mayor o igual a 28).*
+
+*Mostrad gráficamente la distribución de Rating según los valores de Age_Int ordenados: Junior, Middle, Senior.*
+
+**Solución**:
+
+En primer lugar, para crear la variable __Age_Int__ crearemos una función que devuelva los diferentes posibles valores que puede tomar la misma en función de la variable __Age__ que recibirá como parámetro de entrada:
+
+```{r}
+get_age_int<-function(x){
+  if (x <= 20)
+    return ("Junior")
+  else if (x >= 21 & x <=27)
+    return("Middle")
+  else if (x>=28)
+    return("Senior")
+}
+```
+
+Una vez creada la función, realizaremos un lapply por cada una de las filas de la columna __Age__ del dataframe fifaNet e imputaremos el resultado obtenido en la nueva variable __Age_Int__:
+
+```{r}
+fifaNet$Age_Int <- lapply(fifaNet$Age,get_age_int)
+fifaNet$Age_Int <- unlist(fifaNet$Age_Int)
+fifaNet$Age_Int <- as.factor(fifaNet$Age_Int)
+
+levels(fifaNet$Age_Int)
+```
+
+Una vez que ha sido incluida la nueva variable en el dataframe, procedemos a representar como se distribuye la variable __Rating__ en función de los diferentes grupos de edad.
+
+```{r}
+boxplot(Rating~Age_Int,data=fifaNet,xlab="Edad", 
+        ylab="Puntuación")
+```
+
+Como se puede observar, la mediana de la puntuación aumenta a medida que lo hace el grupo de edad, por lo que parece que la variable Edad si es un factor determinante.
+
+## 6.2 Hipótesis nula y alternativa
+
+**Enunciado**:
+
+*Escribid la hipótesis nula y la alternativa.*
+
+**Solución**:
+
+* $H_{0}: \alpha_{1} = \alpha_{2} = \alpha_{3} = 0$
+
+* $H_{1}: \alpha_{i} != \alpha_{j}$ para algún i != j
+
+
+
+## 6.3 Modelo
+
+**Enunciado**:
+
+*Calculad el análisis de varianza, usando la función aov o lm. Interpretad el resultado del análisis, teniendo en cuenta los valores: Sum Sq, Mean SQ, F y Pr (> F).*
+
+
+```{r}
+lm_anova <- lm(Rating~Age_Int,data=fifaNet)
+taov<-anova(lm_anova)
+taov
+```
+
+Como se puede observar, obtenemos un p-valor muy inferior al nivel de significación del 5%. Por lo tanto, descartamos la hipótesis nula y aceptamos la hipótesis alternativa y concluimos por tanto que el factor es significativo. Es decir, la edad afecta a la puntuación obtenida en la variable __Rating__.
+
+Por otro lado cabe destacar que la varianza del error es de 38 (Valor Mean Sq de la fila Residuals), lo que quiere decir que de media la varianza de la media de cada una de las muestras con respecto a la media total es de 38.
+
+Y en el caso de la varianza obtenida en la variable Age_Int (Valor Mean Sq de la fila Age_Int) realmente corresponde a la media de la varianza que hay en cada uno de los grupos de la variable Age_Int, que en este caso es igual a 106401.
+
+
+## 6.4 Efectos de los niveles del factor
+
+**Enunciado:**
+
+*Proporcionad la estimación del efecto de los niveles del factor Age_Int.*
+
+**Solución:**
+
+
+```{r}
+tapply(fifaNet$Rating, fifaNet$Age_Int, mean)
+
+```
+
+
+## 6.5 Interpretación de los resultados
+
+**Enunciado:**
+
+*Interpretad los resultados obtenidos en los apartados anteriores.*
+
+
+**Solución:**
+
+Estos valores corresponden con la desviación de la media de cada uno de los grupos frente a la media global de la variable __Rating__
+
+
+## 6.6 Adecuación del modelo
+
+**Enunciado:**
+
+*Mostrad visualmente la adecuación del modelo ANOVA. Podéis usar plot sobre el modelo ANOVA calculado.*
+
+**Solución:**
+
+```{r}
+plot(lm_anova)
+
+```
+
+### 6.6.1 Normalidad de los residuos
+
+**Enunciado:**
+
+*Interpretad la normalidad de los residuos a partir del gráfico Normal Q-Q que habéis mostrado en el apartado anterior*
+
+**Solución:**
+
+El gráfica Q-Q corresponde con el último mostrado en el apartado anterior. Como se puede observar, la mayoría de los puntos se ajustan a la recta que cruza los ejes de la gráfica, por lo que todo apunta a que los residuos se distribuyen de manera normal con media 0.
+
+### 6.6.2 Homocedasticidad de los residuos
+
+**Enunciado:**
+
+*El gráfico “Residuals vs Fitted” proporciona información sobre la homcedasticidad de los residuos. Mostrad e interpretad este gráfico.*
+
+**Solución:**
+
+En primer lugar, procedemos a mostrar de nuevo el gráfico solicitado:
+
+```{r}
+plot(lm_anova, which=1)
+```
+
+En este gráfico se pueden observar tres tiras verticales de puntos que están sitiadas en las medias de cada grupo. Estas corresponden a los valores ajustados de las observaciones. La disposición de los residuos muestra una dispersión parecida en cada tira, por lo que todo parece indicar que la igualdad de varianzas se cumple.
+
+
+# 7 ANOVA multifactorial
+
+**Enunciado:**
+
+*A continuación, se desea evaluar el efecto sobre Rating del grupo de edad combinado con el factor tipo de jugador (portero). Seguid los pasos que se indican a continuación.*
+
+
+## 7.1 Análisis visual de los efectos principales y posibles interacciones
+
+**Enunciado:**
+
+*Dibujad en un gráfico la variable Rating en función de Age_Int y en función de portero. El gráfico debe permitir evaluar si hay interacción entre los dos factores. Por ello, se recomienda seguir estos pasos:*
+
+*1. Agrupad el conjunto de datos por Age_Int y por portero. Calculad la media de rating para cada grupo. Para realizar este proceso, se puede hacer con las funciones group_by y summarise de la librería dplyr.*
+
+**Solución:**
+
+```{r}
+fifaNet_mean_group <- fifaNet %>%
+  dplyr::group_by(Age_Int,portero) %>%
+  dplyr::summarise(mean_rating = mean(Rating))
+
+```
+
+
+
+*2. Mostrad el conjunto de datos en forma de tabla (data frame), donde se muestre la media de cada grupo según Age_Int y portero.*
+
+**Solución:**
+
+```{r}
+fifaNet_mean_group
+```
+
+*3. Mostrad en un gráfico el valor medio de la variable Rating para cada factor. Podéis inspiraros en los gráficos de López-Roldán y Fachelli (2015), p.38. Podéis realizar este tipo de gráfico usando la función ggplot de la librería ggplot2.*
+
+**Solución:**
+
+```{r}
+ggplot(fifaNet_mean_group,aes(x=Age_Int,y=mean_rating,fill=factor(portero)))+
+  geom_bar(stat="identity",position="dodge")+
+  scale_fill_discrete(name="Portero",
+                      breaks=c(1, 2),
+                      labels=levels(fifaNet_mean_group))+
+  xlab("Age")+ylab("Mean")
+```
+
+*(El color rojo representa a aquellos que no son porteros y el azul los que sí son porteros)*
+
+*4. Interpretad el resultado sobre si sólo hay efectos principales o hay interacción entre los factores. Si hay interacción, explicad cómo se observa esta interacción en el gráfico.*
+
+**Solución:**
+
+Evaluando el gráfico anterior, podemos ver que la media de la variable **Rating** se va haciendo más grande conforme va aumentando la edad del jugador y que en el caso de los porteros esta media es mayor en todos los casos.
+
+## 7.2 Cálculo del modelo
+
+**Enunciado:**
+
+*Podéis usar la función aov.*
+
+**Solución:**
+
+
+```{r}
+anova_two_factors <- aov(Rating ~ Age_Int*portero, data = fifaNet)
+anova(anova_two_factors)
+```
+
+## 7.3 Interpretación de los resultados
+
+**Solución: **
+
+Como se puede observar, el p-valor obtenido en cada uno de los factores principales, es menor a 0.05, por lo que rechazamos la hipótesis nula y aceptamos por tanto que hay efecto de la edad y de si el jugador es un portero o no.
+
+Por otro lado, es interesante analizar los parámetros del modelo. 
+
+En el caso de la estimación de la varianza del error, el valor obtenido es de 38.
+
+
+## 7.4 Adecuación del modelo
+
+**Enunciado:**
+
+*Interpretad la adecuación del modelo ANOVA obtenido usando los gráficos de los residuos.*
+
+**Solución: **
+
+```{r}
+plot(anova_two_factors, which=1)
+plot(anova_two_factors, which=2)
+```
+
+
+En el primer gráfico pordemo observar 6 tiras verticales de puntos que están situadas en las medias de cada uno de los grupos formados por las dos variables de tipo factor. La disposición de las tiras es muy similar en la mayoría de los casos menos en el caso de la segunda tira, lo que podría denotar una ligera falta de homocedasticidad, pero esto solo ocurre en uno de los grupos.
+
+Por otro lado, en el segundo gráfico vemos que la mayoría de los puntos se adaptan a la recta que cruza los cuadrantes de la gráfica, lo que indica que los errores se distribuyen de forma normal.
+
+
+# 8 Conclusiones
+
+**Enunciado:**
+
+*Resumid las conclusiones principales del análisis. Para ello, podéis resumir las conclusiones de cada uno de los apartados.*
+
+**Solución:**
+
+Procedemos a responder las diferentes cuestiones planteadas en este documento:
+
+1. ¿Podemos asumir que la variable Weight tiene una distribución normal?
+  
+  Tras representar dicha variable a través de un histograma y a través de un gráfico Q-Q, hemos concluido que la variable __Weight__ tiene una distribución normal.
+
+
+2. Calculad manualmente el intervalo de confianza al 95% de la media poblacional de la variable Weight de los jugadores (No se pueden utilizar funciones como t.test o z.test para el cálculo). A partir del resultado obtenido, explicad cómo se interpreta el intervalo de confianza.
+
+  Tras calcular el intervalo de confianza al 95% de la media poblacional a través de la función **getConfidentInterval**, se obtuvo el la conslusión de que el 95% de las veces que se extraiga una muestra de la misma población que esta, la media del peso de los jugadores se encontrará entre 75.15kg y 75.35kg.
+
+3. Calculad los intervalos de confianza al 95% de la media poblacional de la variable Weight, en función de si los jugadores son de campo o porteros. ¿Qué conclusión se puede extraer de la comparación de los dos intervalos, en relación a si existe solapamiento o no en los intervalos de confianza? Justificad la respuesta.
+
+  Tras calcular los intervalos de confianza solicitados, la conclusión obtenida es que según los datos presentes en esta muestra analizada, podemos asegurar con un 95% de confianza que el peso de aquellos jugadores que son porteros es mayor que el de los jugadores de campo. En concreto, el intervalo de confianza obtenido del peso de los porteros es 82.53 kg y 83.47 kg y el de los jugadores de campo es 74.86kg y 75.06kg.
+
+4. ¿Podemos aceptar que la altura de los porteros supera en más de 5 centímetros la altura de los jugadores de campo? Responded a la pregunta utilizando un nivel de confianza del 95%.
+
+  Tras calcular el test de hipótesis y obtener un p-valor muy por debajo del valor 0.05, podemos asegurar con un 95% de confianza que la altura de los porteros supera en más de 5 centímetros la altura de los jugadores de campo.
+
+5. Con respecto al modelo de regresión lineal calculado en el apartado 4, ¿Cuál es la calidad del ajuste?
+
+  La calidad del ajuste del modelo ha sido medida a través de la variable R cuadrado ajustado, que en este caso tiene el valor de **0.5094**, lo que indica que el modelo calculado logra explicar aproximadamente la mitad de la varianza de los datos reales.
+
+6. Con respecto al modelo de regresión lineal calculado en el apartado 4, ¿Cuál es la contribución de las variables explicativas?
+
+* En el caso de la variable __Age__ la contribución es de 0.44
+* En el caso de la variable __portero__ la contribución es de 9.35
+* En el caso de la variable __Weight__ la contribución es de 0.24
+* En el caso de la variable __Preffered_Foot__ la contribución es de -0.047
+
+7. Aplicad el modelo de regresión para predecir el rating de un jugador de campo con pie izquierdo preferido, con un peso de 70, edad de 24, control del balón de 80 y visión de 60.
+
+  El valor predicho por el modelo es igual a 69.1
+
+
+8. Con respecto al modelo de regresión logística calculado en el apartado 5, ¿Cuáles son los valores de las métricas 'sensitivity' y 'specificity'?.
+
+  El valor de la variable Sensitivity es de 0.09 y el valor de la variable Specificity es de 0.997.
+
+9. ¿En qué porcentaje se ve aumentada la probabilidad de ir a la selección si eres portero?
+
+  La probabilidad de ir a la selección aumenta si el jugador es un portero 2.32 veces.
+
+10. ¿Con que probabilidad un portero de 25 años, con un rating de 95 puntos y una clasificación de Work_Rate como High/High irá a la selección?
+
+  La probabilidad obtenida por el modelo es de 0.96
+
+11. Vamos a realizar un ANOVA para contrastar si existen diferencias en la variable Rating en función del grupo de edad al que pertenecen los jugadores.
+
+
+  Tras calcular el ANOVA, podemos asegurar con un 95% de confianza que existen diferencias en la variable Rating en función al grupo de edad al que pertenecen los jugadores.
+
+12. A continuación, se desea evaluar el efecto sobre Rating del grupo de edad combinado con el factor tipo de jugador (portero). Seguid los pasos que se indican a continuación.
+
+  Tras cañciñar eñ ANOVA multi factor, podemos asegurar con un 95% de confianza que existen diferencias en la variable Rating en función del grupo de edad y si el jugador es portero o jugador de campo.
